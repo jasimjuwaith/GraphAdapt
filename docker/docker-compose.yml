@@ -1,0 +1,123 @@
+networks:
+  graph_adapt_net:
+    driver: bridge
+
+volumes:
+  memgraph_data:
+  redis_data:
+  postgres_data:
+
+services:
+  # 1. Memgraph Community
+  memgraph:
+    image: memgraph/memgraph-platform:latest
+    container_name: graph_adapt_memgraph
+    ports:
+      - "7687:7687"   # Bolt protocol
+      - "3000:3000"   # Memgraph Lab web UI
+    environment:
+      - MEMGRAPH_USER=admin
+      - MEMGRAPH_PASSWORD=password123
+    deploy:
+      resources:
+        limits:
+          memory: 2500M
+    volumes:
+      - memgraph_data:/var/lib/memgraph
+    networks:
+      - graph_adapt_net
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'SHOW STORAGE INFO;' | mgconsole --username admin --password password123 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. Redis Message Broker & State Cache
+  redis:
+    image: redis:7-alpine
+    container_name: graph_adapt_redis
+    ports:
+      - "6379:6379"
+    command: redis-server --save 60 1 --loglevel notice --maxmemory 512mb --maxmemory-policy volatile-lru
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    volumes:
+      - redis_data:/data
+    networks:
+      - graph_adapt_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # 3. PostgreSQL Metadata Store
+  postgres:
+    image: postgres:15-alpine
+    container_name: graph_adapt_postgres
+    ports:
+      - "5442:5432"
+    environment:
+      - POSTGRES_DB=graph_adapt_db
+      - POSTGRES_USER=adapt_user
+      - POSTGRES_PASSWORD=adapt_password
+    deploy:
+      resources:
+        limits:
+          memory: 1000M
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - graph_adapt_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U adapt_user -d graph_adapt_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # 4. Graph-ADAPT FastAPI App / Worker Service
+  graph_adapt_core:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: graph_adapt_core
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../.env
+    environment:
+      - MEMGRAPH_HOST=memgraph
+      - MEMGRAPH_PORT=7687
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - SIEM_MODE=${SIEM_MODE:-mock}
+      - SPLUNK_URL=${SPLUNK_URL:-}
+      - SPLUNK_TOKEN=${SPLUNK_TOKEN:-}
+      - ELASTIC_URL=${ELASTIC_URL:-}
+      - ELASTIC_API_KEY=${ELASTIC_API_KEY:-}
+      - TELEMETRY_BATCH_SIZE=${TELEMETRY_BATCH_SIZE:-100}
+      - TELEMETRY_FLUSH_SECONDS=${TELEMETRY_FLUSH_SECONDS:-0.5}
+      - GRAPH_RETENTION_HOURS=${GRAPH_RETENTION_HOURS:-72}
+    volumes:
+      - ../src:/app/src
+      - ../rules:/app/rules
+      - ../data:/app/data
+      - ../scripts:/app/scripts
+    deploy:
+      resources:
+        limits:
+          memory: 1500M 
+    depends_on:
+      memgraph:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - graph_adapt_net

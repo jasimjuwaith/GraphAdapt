@@ -1,0 +1,27 @@
+title: Office Application Spawned System Shell
+id: 6d42989e-8b1a-4b4e-0010-000000000010
+status: test
+description: Detects Office applications spawning command interpreters or scripting engines.
+author: Graph-ADAPT Benchmark Corpus
+date: 2026/11/25
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_parent:
+    ParentImage|endswith:
+      - '\winword.exe'
+      - '\excel.exe'
+      - '\outlook.exe'
+  selection_child:
+    Image|endswith:
+      - '\cmd.exe'
+      - '\powershell.exe'
+      - '\wscript.exe'
+  condition: selection_parent and selection_child
+falsepositives:
+  - Trusted document automation add-ins
+level: high
+tags:
+  - attack.initial_access
+  - attack.t1566.001

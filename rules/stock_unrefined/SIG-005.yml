@@ -1,0 +1,24 @@
+title: WMI Remote Process Execution
+id: 6d42989e-8b1a-4b4e-0005-000000000005
+status: test
+description: Detects WMI process creation commands.
+author: Graph-ADAPT Benchmark Corpus
+date: 2026/11/25
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+      - '\wmic.exe'
+      - '\wmiprvse.exe'
+    CommandLine|contains:
+      - 'process call create'
+      - '/node:'
+  condition: selection
+falsepositives:
+  - Remote administration and inventory tools
+level: high
+tags:
+  - attack.execution
+  - attack.t1047

@@ -1,0 +1,22 @@
+title: Certutil Network and Decode Activity
+id: 6d42989e-8b1a-4b4e-0003-000000000003
+status: test
+description: Detects certutil download or decoding operations.
+author: Graph-ADAPT Benchmark Corpus
+date: 2026/11/25
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: '\certutil.exe'
+    CommandLine|contains:
+      - '-urlcache'
+      - '-decode'
+  condition: selection
+falsepositives:
+  - Enterprise certificate management
+level: high
+tags:
+  - attack.defense_evasion
+  - attack.t1140

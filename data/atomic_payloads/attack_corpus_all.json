@@ -1,0 +1,25 @@
+[
+  {
+    "target_rule_id": "SIG-001",
+    "attack_id": "T1059.001-Atomic-01",
+    "Event": {
+      "System": {
+        "EventID": 1,
+        "Computer": "WIN-SEC-WORKSTATION-01"
+      },
+      "EventData": {
+        "UtcTime": "2026-10-10 15:10:00.000",
+        "ProcessGuid": "{F9E8D7C6-0001-0001-0001-000000009912}",
+        "ProcessId": "9912",
+        "Image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        "CommandLine": "powershell.exe -NoP -NonI -W Hidden -EncodedCommand SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIABOAGUAdAAuAFcAZQBiAEMAbABpAGUAbgB0ACkA",
+        "IntegrityLevel": "High",
+        "User": "CORP\\j.doe",
+        "ParentProcessGuid": "{F9E8D7C6-0001-0001-0001-000000003310}",
+        "ParentProcessId": "3310",
+        "ParentImage": "C:\\Users\\j.doe\\AppData\\Local\\Temp\\dropper.exe",
+        "ParentCommandLine": "dropper.exe"
+      }
+    }
+  }
+]

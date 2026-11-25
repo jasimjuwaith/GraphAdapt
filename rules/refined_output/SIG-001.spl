@@ -1,0 +1,1 @@
+Image="*\\powershell.exe" CommandLine="*-EncodedCommand*" NOT ((ParentImage="*\CcmExec.exe" AND User="*NT AUTHORITY\SYSTEM*"))

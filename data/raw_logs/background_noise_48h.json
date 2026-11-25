@@ -1,0 +1,24 @@
+[
+  {
+    "target_rule_id": "SIG-001",
+    "Event": {
+      "System": {
+        "EventID": 1,
+        "Computer": "WIN-SEC-WORKSTATION-01"
+      },
+      "EventData": {
+        "UtcTime": "2026-10-10 14:30:00.000",
+        "ProcessGuid": "{A1B2C3D4-0001-0001-0001-000000004108}",
+        "ProcessId": "4108",
+        "Image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        "CommandLine": "powershell.exe -EncodedCommand RwBlAHQALQBDAGgAaQBsAGQASQB0AGUAbQAgAC0AUABhAHQAaAAgAEMAOgBcAEIAYQBjAGsAdQBwAHMA",
+        "IntegrityLevel": "System",
+        "User": "NT AUTHORITY\\SYSTEM",
+        "ParentProcessGuid": "{A1B2C3D4-0001-0001-0001-000000002104}",
+        "ParentProcessId": "2104",
+        "ParentImage": "C:\\Windows\\CCM\\CcmExec.exe",
+        "ParentCommandLine": "C:\\Windows\\CCM\\CcmExec.exe"
+      }
+    }
+  }
+]

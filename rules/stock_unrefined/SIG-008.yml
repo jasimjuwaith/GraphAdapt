@@ -1,0 +1,21 @@
+title: Registry Run Key Modification
+id: 6d42989e-8b1a-4b4e-0008-000000000008
+status: test
+description: Detects modification of common registry run keys.
+author: Graph-ADAPT Benchmark Corpus
+date: 2026/11/25
+logsource:
+  category: registry_set
+  product: windows
+detection:
+  selection:
+    TargetObject|contains:
+      - '\CurrentVersion\Run'
+      - '\CurrentVersion\RunOnce'
+  condition: selection
+falsepositives:
+  - Software installation and update agents
+level: medium
+tags:
+  - attack.persistence
+  - attack.t1547.001

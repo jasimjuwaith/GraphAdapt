@@ -1,0 +1,22 @@
+title: Scheduled Task Command Execution
+id: 6d42989e-8b1a-4b4e-0006-000000000006
+status: test
+description: Detects creation or modification of scheduled tasks that execute commands.
+author: Graph-ADAPT Benchmark Corpus
+date: 2026/11/25
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: '\schtasks.exe'
+    CommandLine|contains:
+      - '/create'
+      - '/change'
+  condition: selection
+falsepositives:
+  - Approved IT automation and patch management
+level: medium
+tags:
+  - attack.persistence
+  - attack.t1053.005

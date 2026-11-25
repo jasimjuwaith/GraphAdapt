@@ -1,0 +1,23 @@
+title: Browser Credential Database Access
+id: 6d42989e-8b1a-4b4e-0007-000000000007
+status: test
+description: Detects access to browser credential database files.
+author: Graph-ADAPT Benchmark Corpus
+date: 2026/11/25
+logsource:
+  category: file_access
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+      - '\chrome.exe'
+      - '\msedge.exe'
+      - '\firefox.exe'
+    TargetFilename|contains: '\User Data\'
+  condition: selection
+falsepositives:
+  - Normal browser startup and profile synchronization
+level: medium
+tags:
+  - attack.credential_access
+  - attack.t1555.003

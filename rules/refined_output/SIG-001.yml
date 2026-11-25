@@ -1,0 +1,23 @@
+title: Suspicious Encoded PowerShell Execution
+id: 6d42989e-8b1a-4b4e-9d6a-000000000001
+status: test
+description: Detects execution of PowerShell with encoded command-line arguments.
+author: Graph-ADAPT Benchmark Corpus
+date: 2026/10/10
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \powershell.exe
+    CommandLine|contains: -EncodedCommand
+  filter_sccm_admin:
+    ParentImage|endswith: \CcmExec.exe
+    User|contains: NT AUTHORITY\SYSTEM
+  condition: selection
+falsepositives:
+- Legitimate administrative scripts and SCCM management tasks
+level: medium
+tags:
+- attack.execution
+- attack.t1059.001

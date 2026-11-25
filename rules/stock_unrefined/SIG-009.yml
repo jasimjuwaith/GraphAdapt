@@ -1,0 +1,24 @@
+title: PsExec or Remote Service Execution
+id: 6d42989e-8b1a-4b4e-0009-000000000009
+status: test
+description: Detects PsExec-style remote service installation or execution.
+author: Graph-ADAPT Benchmark Corpus
+date: 2026/11/25
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+      - '\psexec.exe'
+      - '\psexesvc.exe'
+    CommandLine|contains:
+      - '\\127.0.0.1'
+      - '\\ADMIN$'
+  condition: selection
+falsepositives:
+  - Authorized remote administration
+level: high
+tags:
+  - attack.lateral_movement
+  - attack.t1021.002
