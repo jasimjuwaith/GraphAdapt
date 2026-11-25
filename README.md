@@ -97,7 +97,8 @@ Regression Engine
   `-- Loop 2: attack recall retention
 
 PostgreSQL
-  Reserved for persistent execution and deployment records
+  |-- Versioned pipeline-run audit records
+  `-- Approval and deployment status
 ```
 
 ---
@@ -835,21 +836,20 @@ The current repository does not yet implement persistent rule versions or automa
 | L0/L1 vs L2/L3 routing | Implemented |
 | Mock SIG-001 GraphRAG demo | Verified; attributes and causal edges now serialize |
 | Mock L1 classification | Verified |
-| Mock Rule Refiner | Verified to generate candidates |
-| Double-loop regression | Implemented basic JSON-corpus engine; generated mock refinements may fail pySigma validation |
+| Rule Refiner | Implemented with Groq candidates plus a deterministic SCCM fallback |
+| Double-loop regression | Implemented basic JSON-corpus engine; corpus and live-SIEM coverage remain limited |
 | Sigma YAML export | Implemented for rules that pass validation |
 | Splunk SPL export | Implemented for rules that pass validation |
 | Mock SIEM | Implemented |
 | Splunk connector | Implemented basic REST foundation |
 | Elastic/Wazuh connector | Implemented basic REST foundation |
-| SQLite/PostgreSQL execution store | Not implemented |
-| SQLAlchemy async persistence | Not implemented |
-| Rule version history | Not implemented |
-| WebSocket/SSE event bus | Not implemented |
-| React/Vue/other dashboard | Not implemented |
-| Approval buttons | Not implemented |
-| Rule rollback API | Not implemented |
-| Live deployment confirmation tracking | Not implemented |
+| PostgreSQL execution and audit store | Implemented with direct psycopg2 persistence |
+| Rule version history | Partial; each pipeline run stores original/refined YAML, but no dedicated immutable version table |
+| WebSocket/SSE event bus | Implemented with `/ws/events` WebSocket broadcasting |
+| FastAPI-served analyst dashboard | Implemented as an initial command center |
+| Approval buttons | Implemented for approve, rollback, and escalate |
+| Rule rollback API | Partial; records rollback status but does not restore a previous SIEM saved search/version |
+| Live deployment confirmation tracking | Partial; depends on connector response; no asynchronous deployment reconciliation |
 | Full KQL/Lucene deployment | Not implemented |
 | Splunk saved-search result polling robustness | Partial |
 | Elastic alert field mapping | Partial and deployment-specific |
@@ -863,27 +863,46 @@ The current repository does not yet implement persistent rule versions or automa
 | Metrics and tracing | Not implemented |
 | Docker healthcheck for the core API | Not implemented |
 | End-to-end automated test suite | Not implemented |
-| Frontend causal graph viewer | Not implemented |
+| FastAPI causal graph viewer | Partial; dashboard draws nodes from each run but has no live Memgraph topology refresh |
 
 ---
 
 ## What needs to be implemented
 
-### Priority 1: state persistence
+### Specification compliance matrix
 
-Add [src/storage/](src/storage/) with SQLAlchemy async models and migrations for:
+The requested architecture is partially satisfied. The following status is based on executable code, not aspirational labels.
 
-- Execution/run metadata
-- Trigger alert metadata
-- Extracted subgraph payload
-- Correlator output
-- Oracle classification
-- Refiner iterations
-- Loop 1 and Loop 2 results
-- Original/refined YAML diff
-- Compiled SPL/KQL/Lucene
-- Deployment status
-- Approvals and rollback history
+| Specification requirement | Status | Evidence / remaining gap |
+|---|---|---|
+| Live telemetry ingestion | Partial | Redis Stream ingestion and Memgraph process/file/network ingestion are implemented, but the parser is intentionally format-dependent and end-to-end normalizer coverage is not automated. |
+| Gatekeeper drift detection | Implemented | Redis Sorted Sets track rolling alert/incident counters and queue degraded rules. |
+| 3-hop causal GraphRAG | Partial | Native upstream `SPAWNED*1..3` traversal is implemented, but no enforced temporal ordering, edge-time filtering, or complete graph-wide lineage is guaranteed. |
+| Context Correlator | Implemented | Generates execution lineage, privilege context, and anomaly indicators through Groq structured output. |
+| L0/L1 vs L2/L3 Oracle | Implemented | Threat classification and workflow routing are implemented. |
+| Lineage-aware Sigma refinement | Partial | An LLM candidate is synthesized and a deterministic SCCM fallback exists. It relies on known fields and does not guarantee a validated structural refinement for every rule. |
+| Double-loop regression | Partial | No-false-positive/no-missed-attack JSON replay and pySigma compilation exist, but attack/noise corpora are small, and the engine does not execute against a live SIEM. |
+| PostgreSQL run persistence | Implemented | Every pipeline run can persist trigger data, subgraph, lineage, Oracle output, YAML, SPL, iterations, status, and approval state. |
+| Real-time WebSocket event bus | Implemented | `/ws/events` broadcasts pipeline and analyst actions. No replay buffer or durable event topic is implemented. |
+| FastAPI SOC dashboard | Partial | The dashboard shows runs, Oracle output, graph nodes, YAML diff, SPL, and controls. It does not yet show live telemetry throughput, Memgraph counts, or regression evidence charts. |
+| Approve and push to SIEM | Partial | The action invokes the selected connector, but deployment confirmation, saved-search result verification, and multi-SIEM parity are incomplete. |
+| Rollback | Partial | The API records rollback state only; it does not query or restore the previously deployed SIEM artifact. |
+| Authentication and authorization | Not implemented | Dashboard and APIs are currently unauthenticated. |
+| Rule version history | Partial | Runs contain original/refined snapshots, but no immutable revision model or restore endpoint exists. |
+| Production resilience | Partial | Redis retries/reclaim and dead-letter handling are not complete. |
+| Automated test suite | Not implemented | No comprehensive `tests/` suite is present for the complete workflow. |
+
+### Priority 1: strengthen state persistence
+
+[src/storage/postgres_store.py](src/storage/postgres_store.py) already persists the primary audit fields. Complete it with:
+
+- SQLAlchemy models or migrations such as Alembic
+- Immutable revision rows for every original/refined/deployed artifact
+- Loop 1 and Loop 2 pass/fail evidence
+- Unique run IDs and idempotency keys
+- Approval actors and timestamps
+- Previous-SIEM-artifact references for rollback
+- Deployment reconciliation and retry state
 
 Recommended states:
 
@@ -895,9 +914,9 @@ ESCALATED
 FAILED
 ```
 
-### Priority 2: real-time event bus
+### Priority 2: harden the real-time event bus
 
-Add `GET /ws/events` with WebSocket broadcast support for:
+`/ws/events` currently broadcasts in-process events. Add:
 
 - `TELEMETRY_INGESTED`
 - `ALERT_RECEIVED`
@@ -908,11 +927,11 @@ Add `GET /ws/events` with WebSocket broadcast support for:
 - `REGRESSION_RESULT`
 - `RULE_DEPLOYED`
 
-An SSE fallback can be added for browser or reverse-proxy compatibility.
+An SSE fallback can be added for browser or reverse-proxy compatibility. Add durable event replay and Redis-backed fan-out before multi-replicas or container restarts are supported.
 
-### Priority 3: analyst command center
+### Priority 3: expand the analyst command center
 
-Add `frontend/` or mount a FastAPI-served dashboard providing:
+The FastAPI dashboard currently provides run history, provenance, Oracle output, YAML/SPL, and controls. Add:
 
 - Telemetry and alerts-per-second counters
 - Memgraph node/edge counts
