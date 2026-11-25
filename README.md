@@ -258,7 +258,7 @@ Copy-Item .env.example .env
 Set at least:
 
 ```dotenv
-GROQ_API_KEY=gsk_your_key
+GROQ_API_KEY=replace_with_your_groq_api_key
 LLM_MODEL_NAME=openai/gpt-oss-120b
 SIEM_MODE=mock
 
